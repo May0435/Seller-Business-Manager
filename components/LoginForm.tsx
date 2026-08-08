@@ -11,26 +11,6 @@ export default function LoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function createServerSession() {
-    const user = await signIn(email, password);
-
-    const idToken = await user.user.getIdToken();
-
-    const response = await fetch("/api/auth/session", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        idToken,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error("서버 로그인 세션을 만들지 못했습니다.");
-    }
-  }
-
   async function handleSignUp() {
     try {
       setLoading(true);
@@ -53,14 +33,39 @@ export default function LoginForm() {
     try {
       setLoading(true);
 
-      await createServerSession();
+      // 1. Firebase 로그인
+      const credential = await signIn(email, password);
 
+      // 2. Firebase ID Token 가져오기
+      const idToken = await credential.user.getIdToken();
+
+      // 3. ID Token을 서버로 보내서 서버 세션 생성
+      const response = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          idToken,
+        }),
+      });
+
+      // 4. 서버 세션 생성 실패
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+
+        throw new Error(
+          data?.error || "서버 로그인 세션을 만들지 못했습니다."
+        );
+      }
+
+      // 5. 세션 생성 성공 → Dashboard 이동
       router.push("/dashboard");
     } catch (error: unknown) {
       if (error instanceof Error) {
         alert(error.message);
       } else {
-        alert("로그인 중 오류가 발생했습니다.");
+        alert("오류가 발생했습니다.");
       }
     } finally {
       setLoading(false);
@@ -68,7 +73,7 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-md rounded-2xl border bg-white p-8 shadow-sm">
+    <div className="mx-auto w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
       <h1 className="mb-2 text-center text-2xl font-bold">
         Etsy Manager Pro
       </h1>
