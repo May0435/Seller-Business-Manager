@@ -1,27 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { getApps, initializeApp, cert } from "firebase-admin/app";
 
-const projectId = process.env.FIREBASE_PROJECT_ID;
-const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+function getAdminAuth() {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(
+    /\\n/g,
+    "\n"
+  );
 
-if (!projectId || !clientEmail || !privateKey) {
-  throw new Error("Firebase Admin 환경변수가 설정되지 않았습니다.");
+  if (!projectId || !clientEmail || !privateKey) {
+    throw new Error("Firebase Admin 환경변수가 설정되지 않았습니다.");
+  }
+
+  const app =
+    getApps().length > 0
+      ? getApps()[0]
+      : initializeApp({
+          credential: cert({
+            projectId,
+            clientEmail,
+            privateKey,
+          }),
+        });
+
+  return getAuth(app);
 }
-
-const adminApp =
-  getApps().length > 0
-    ? getApps()[0]
-    : initializeApp({
-        credential: cert({
-          projectId,
-          clientEmail,
-          privateKey,
-        }),
-      });
-
-const adminAuth = getAuth(adminApp);
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,6 +38,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const adminAuth = getAdminAuth();
 
     await adminAuth.verifyIdToken(idToken);
 
