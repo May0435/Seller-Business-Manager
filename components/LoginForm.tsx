@@ -1,22 +1,45 @@
 "use client";
 
 import { useState } from "react";
-import { signUp } from "@/lib/auth";
+import { useRouter } from "next/navigation";
+import { signIn, signUp } from "@/lib/auth";
 
 export default function LoginForm() {
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function handleSignUp() {
     try {
+      setLoading(true);
       await signUp(email, password);
-      alert("회원가입이 완료되었습니다!");
+      alert("회원가입 완료!");
     } catch (error: unknown) {
       if (error instanceof Error) {
         alert(error.message);
       } else {
-        alert("알 수 없는 오류가 발생했습니다.");
+        alert("오류가 발생했습니다.");
       }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleLogin() {
+    try {
+      setLoading(true);
+      await signIn(email, password);
+      router.push("/dashboard");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("오류가 발생했습니다.");
+      }
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -27,7 +50,7 @@ export default function LoginForm() {
       </h1>
 
       <p className="mb-8 text-center text-gray-500">
-        Digital Product Manager
+        로그인
       </p>
 
       <input
@@ -35,7 +58,7 @@ export default function LoginForm() {
         placeholder="이메일"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="mb-4 w-full rounded-lg border border-gray-300 p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="mb-4 w-full rounded-lg border p-3"
       />
 
       <input
@@ -43,15 +66,26 @@ export default function LoginForm() {
         placeholder="비밀번호"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="mb-6 w-full rounded-lg border border-gray-300 p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="mb-6 w-full rounded-lg border p-3"
       />
 
-      <button
-        onClick={handleSignUp}
-        className="w-full rounded-lg bg-blue-600 py-3 text-white transition hover:bg-blue-700"
-      >
-        회원가입
-      </button>
+      <div className="flex gap-3">
+        <button
+          onClick={handleLogin}
+          disabled={loading}
+          className="flex-1 rounded-lg bg-blue-600 py-3 text-white hover:bg-blue-700"
+        >
+          로그인
+        </button>
+
+        <button
+          onClick={handleSignUp}
+          disabled={loading}
+          className="flex-1 rounded-lg bg-green-600 py-3 text-white hover:bg-green-700"
+        >
+          회원가입
+        </button>
+      </div>
     </div>
   );
 }
