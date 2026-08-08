@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuth } from "firebase-admin/auth";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { FieldValue } from "firebase-admin/firestore";
+import { adminAuth, adminDb } from "@/lib/firebase-admin";
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // OAuth 임시 쿠키 확인
     const savedState = request.cookies.get("etsy_oauth_state")?.value;
     const codeVerifier =
       request.cookies.get("etsy_code_verifier")?.value;
@@ -40,6 +41,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // CSRF 방지
     if (state !== savedState) {
       return NextResponse.json(
         { error: "잘못된 OAuth state입니다." },
@@ -47,9 +49,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Firebase UID가 실제 사용자로 존재하는지 확인
-    const adminAuth = getAuth();
-
+    // Firebase 사용자 확인
     await adminAuth.getUser(firebaseUid);
 
     const clientId = process.env.ETSY_CLIENT_ID;
@@ -108,9 +108,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Firestore에 Etsy 연결 정보 저장
-    const db = getFirestore();
-
-    await db
+    await adminDb
       .collection("users")
       .doc(firebaseUid)
       .collection("integrations")
@@ -119,11 +117,13 @@ export async function GET(request: NextRequest) {
         provider: "etsy",
         accessToken,
         refreshToken,
-        expiresAt: Date.now() + Number(expiresIn || 3600) * 1000,
+        expiresAt:
+          Date.now() + Number(expiresIn || 3600) * 1000,
         connectedAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });
 
+    // Dashboard로 이동
     const response = NextResponse.redirect(
       new URL("/dashboard?etsy=connected", request.url)
     );
