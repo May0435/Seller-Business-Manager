@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { getAuth } from "firebase-admin/auth";
+import { adminAuth } from "@/lib/firebase-admin";
 
 function base64Url(buffer: Buffer) {
   return buffer
@@ -31,8 +31,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const adminAuth = getAuth();
-
+    // Firebase Admin으로 세션 검증
     const decodedToken = await adminAuth.verifySessionCookie(
       sessionCookie,
       true
@@ -40,6 +39,7 @@ export async function GET(request: NextRequest) {
 
     const uid = decodedToken.uid;
 
+    // OAuth state / PKCE 생성
     const state = base64Url(crypto.randomBytes(32));
     const codeVerifier = base64Url(crypto.randomBytes(32));
 
@@ -89,7 +89,6 @@ export async function GET(request: NextRequest) {
       path: "/",
     });
 
-    // OAuth 요청과 Firebase 사용자를 연결
     response.cookies.set("etsy_firebase_uid", uid, {
       httpOnly: true,
       secure: true,
